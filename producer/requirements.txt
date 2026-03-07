@@ -1,0 +1,10 @@
+pandas
+numpy
+requests
+scikit-learn
+tensorflow
+ta
+python-binance
+fastapi
+flask
+uvicorn
