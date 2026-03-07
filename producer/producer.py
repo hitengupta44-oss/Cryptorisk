@@ -28,9 +28,9 @@ threading.Thread(target=run_flask).start()
 
 # ================= CONFIG =================
 
-BACKEND_URL  = "https://YOUR-BACKEND.up.railway.app/update"   # ✏️ edit
-BACKEND_HOME = "https://YOUR-BACKEND.up.railway.app/"          # ✏️ edit
-SERVICE_URL  = "https://YOUR-PRODUCER.up.railway.app/"         # ✏️ edit
+BACKEND_URL  = "https://cryptorisk-production.up.railway.app/update"
+BACKEND_HOME = "https://cryptorisk-production.up.railway.app/"
+SERVICE_URL  = "https://producer-production-2e4b.up.railway.app/"
 
 SYMBOL = "BTCUSDT"
 INTERVAL = Client.KLINE_INTERVAL_1MINUTE
@@ -499,3 +499,4 @@ while True:
         print("Error:", e)
 
     time.sleep(5)
+
