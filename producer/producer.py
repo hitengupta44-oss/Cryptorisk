@@ -30,7 +30,7 @@ threading.Thread(target=run_flask).start()
 
 BACKEND_URL  = "https://cryptorisk-production.up.railway.app/update"
 BACKEND_HOME = "https://cryptorisk-production.up.railway.app/"
-SERVICE_URL  = ""
+SERVICE_URL  = "https://cryptorisk-gqjl.onrender.com"
 
 SYMBOL = "BTCUSDT"
 INTERVAL = Client.KLINE_INTERVAL_1MINUTE
@@ -499,5 +499,6 @@ while True:
         print("Error:", e)
 
     time.sleep(5)
+
 
 
