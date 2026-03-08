@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CryptoRISK</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #020617;
+            color: #e2e8f0;
+            overflow-x: hidden;
+        }
+
+        .font-mono { font-family: 'JetBrains+Mono', monospace; }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+        }
+
+        .risk-glow-rose { box-shadow: 0 0 40px -10px rgba(244, 63, 94, 0.4); }
+        
+        .modebar { display: none !important; }
+        
+        .indicator-pill {
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+
+    <!-- Critical Alert Modal -->
+    <div id="riskModal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+        <div class="glass-panel border-2 border-rose-500 rounded-3xl p-8 max-w-md w-full text-center relative overflow-hidden risk-glow-rose">
+            <div class="absolute top-0 left-0 w-full h-1 bg-rose-500 animate-pulse"></div>
+            <div class="bg-rose-500/20 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="fa-solid fa-triangle-exclamation text-rose-500 text-4xl animate-bounce"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-white mb-4">CRITICAL RISK ALERT</h2>
+            <p id="modalMessage" class="text-slate-300 mb-8 leading-relaxed"></p>
+            <div class="grid grid-cols-2 gap-4">
+                <button onclick="closeModal()" class="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold transition-all text-sm">ACKNOWLEDGE</button>
+                <button class="px-6 py-3 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold transition-all text-sm flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-shield-halved"></i> SECURE
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row justify-between items-center mb-8 gap-6">
+            <div>
+                <h1 class="text-3xl font-bold text-white flex items-center gap-3">
+                    <i class="fa-solid fa-shield-virus text-indigo-500"></i>
+                    QuantShield <span class="text-indigo-500 font-light italic">PRO</span>
+                </h1>
+                <p class="text-slate-400 mt-1 text-sm flex items-center gap-2">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    Predictive Quantum Engine Active (v2.5)
+                </p>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <div id="walletContainer">
+                    <button id="connectBtn" onclick="handleWalletAction()" class="bg-white text-black px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-slate-200 transition-all active:scale-95">
+                        <i class="fa-solid fa-wallet"></i>
+                        <span id="btnText">CONNECT PHANTOM</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- Stats Row -->
+            <div class="lg:col-span-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="glass-panel p-5 rounded-2xl border-l-4 border-l-indigo-500">
+                    <h3 class="text-slate-400 text-[10px] uppercase font-bold tracking-widest mb-1">BTC Index</h3>
+                    <p id="btcVal" class="text-2xl font-bold text-white font-mono">--</p>
+                </div>
+                <div class="glass-panel p-5 rounded-2xl border-l-4 border-l-purple-500">
+                    <h3 class="text-slate-400 text-[10px] uppercase font-bold tracking-widest mb-1">SOL Pulse</h3>
+                    <p id="solVal" class="text-2xl font-bold text-white font-mono">--</p>
+                </div>
+                <div class="glass-panel p-5 rounded-2xl border-l-4 border-l-cyan-500">
+                    <h3 class="text-slate-400 text-[10px] uppercase font-bold tracking-widest mb-1">VWAP Bias</h3>
+                    <p id="vwapBias" class="text-2xl font-bold text-white">NEUTRAL</p>
+                </div>
+                <div class="glass-panel p-5 rounded-2xl border-l-4 border-l-rose-500">
+                    <h3 class="text-slate-400 text-[10px] uppercase font-bold tracking-widest mb-1">RSI Level</h3>
+                    <p id="rsiValTop" class="text-2xl font-bold text-white font-mono">--</p>
+                </div>
+            </div>
+
+            <!-- Main Chart Area -->
+            <div class="lg:col-span-3 flex flex-col gap-4">
+                <!-- Price Chart -->
+                <div class="glass-panel rounded-2xl overflow-hidden flex flex-col h-[500px]">
+                    <div class="p-4 border-b border-slate-800 flex flex-wrap justify-between items-center bg-slate-900/50 gap-2">
+                        <div class="flex items-center gap-3">
+                            <span class="indicator-pill bg-cyan-500/10 text-cyan-400">EMA(20)</span>
+                            <span class="indicator-pill bg-orange-500/10 text-orange-400">SMA(50)</span>
+                            <span class="indicator-pill bg-yellow-500/10 text-yellow-400">VWAP</span>
+                            <span class="indicator-pill bg-white/5 text-slate-400 italic">AI FORECAST</span>
+                        </div>
+                        <div class="text-[10px] text-slate-500 font-mono uppercase tracking-tighter">V8-Predictive Engine • 1m</div>
+                    </div>
+                    <div id="chartContainer" class="flex-grow bg-[#020617]"></div>
+                </div>
+
+                <!-- RSI Panel -->
+                <div class="glass-panel rounded-2xl overflow-hidden flex flex-col h-[180px]">
+                    <div class="px-4 py-2 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Relative Strength Index (14)</span>
+                        <div class="flex gap-4">
+                            <span class="text-[10px] text-rose-500 font-bold">OB: 70</span>
+                            <span class="text-[10px] text-emerald-500 font-bold">OS: 30</span>
+                        </div>
+                    </div>
+                    <div id="rsiContainer" class="flex-grow bg-[#020617]"></div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="flex flex-col gap-6">
+                <!-- SOL Ecosystem Panel -->
+                <div class="glass-panel rounded-2xl p-6 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-4 opacity-5">
+                        <i class="fa-solid fa-bolt text-[80px] text-purple-500"></i>
+                    </div>
+                    <h3 class="text-white font-semibold mb-6 flex items-center gap-2 uppercase tracking-widest text-[10px] border-l-2 border-purple-500 pl-3">
+                        SOL System Health
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-end">
+                            <div>
+                                <p class="text-slate-500 text-[10px] uppercase">Spot Price</p>
+                                <p id="solPriceSide" class="text-xl font-bold text-white font-mono">$0.00</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-emerald-400 text-xs font-bold">+4.8%</p>
+                                <p class="text-slate-500 text-[9px]">24H DELTA</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 pt-2">
+                            <div class="bg-black/40 p-3 rounded-lg border border-slate-800">
+                                <p class="text-slate-500 text-[9px] uppercase mb-1">TPS Load</p>
+                                <p class="text-xs font-mono text-purple-400">3,124 p/s</p>
+                            </div>
+                            <div class="bg-black/40 p-3 rounded-lg border border-slate-800">
+                                <p class="text-slate-500 text-[9px] uppercase mb-1">State</p>
+                                <p class="text-xs font-mono text-emerald-400">STABLE</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trend Analysis -->
+                <div class="glass-panel rounded-2xl p-6">
+                    <h3 class="text-white font-semibold mb-6 flex items-center gap-2 uppercase tracking-widest text-[10px] border-l-2 border-indigo-500 pl-3">
+                        Trend Analysis
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center bg-black/30 p-3 rounded-xl border border-slate-800/50">
+                            <span class="text-[10px] text-slate-400 uppercase">EMA Cross</span>
+                            <span id="emaStatus" class="text-[10px] font-bold text-emerald-400">--</span>
+                        </div>
+                        <div class="flex justify-between items-center bg-black/30 p-3 rounded-xl border border-slate-800/50">
+                            <span class="text-[10px] text-slate-400 uppercase">VWAP Dist.</span>
+                            <span id="vwapDist" class="text-[10px] font-bold text-white">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Risk Range Metrics -->
+                <div class="glass-panel rounded-2xl p-6 flex-grow">
+                    <h3 class="text-white font-semibold mb-6 flex items-center gap-2 uppercase tracking-widest text-[10px] border-l-2 border-rose-500 pl-3">
+                        Risk Range Metrics
+                    </h3>
+                    <div class="space-y-6">
+                        <!-- Meters -->
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-[10px] uppercase font-bold">
+                                <span class="text-slate-500">Volatility Exposure</span>
+                                <span id="volLabel" class="text-amber-400">MODERATE</span>
+                            </div>
+                            <div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                                <div id="volBar" class="h-full bg-amber-500 transition-all duration-700" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-[10px] uppercase font-bold">
+                                <span class="text-slate-500">Drawdown Risk</span>
+                                <span id="drawLabel" class="text-emerald-400">LOW (4%)</span>
+                            </div>
+                            <div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                                <div id="drawBar" class="h-full bg-emerald-500 transition-all duration-700" style="width: 4%"></div>
+                            </div>
+                        </div>
+
+                        <div id="perimeterBox" class="p-4 rounded-xl border border-slate-800 bg-slate-800/20 mt-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i id="perimeterIcon" class="fa-solid fa-shield-halved text-emerald-500 text-xs"></i>
+                                <p id="perimeterTitle" class="text-[10px] font-bold uppercase text-emerald-500">Perimeter Secure</p>
+                            </div>
+                            <p id="perimeterText" class="text-[9px] text-slate-400 leading-tight">
+                                Market structure is currently holding within safe standard deviation bands. VWAP support active.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API = "https://cryptoliveusdt.onrender.com/data";
+        let marketData = [];
+        let walletAddress = null;
+        let lastAlertTime = 0;
+
+        // --- Wallet Logic ---
+        const getProvider = () => {
+            if ('solana' in window) {
+                const provider = window.solana;
+                if (provider.isPhantom) return provider;
+            }
+            return null;
+        };
+
+        async function handleWalletAction() {
+            const provider = getProvider();
+            
+            if (!provider) {
+                window.open("https://phantom.app/", "_blank");
+                return;
+            }
+
+            try {
+                if (walletAddress) {
+                    // Disconnect
+                    await provider.disconnect();
+                    walletAddress = null;
+                } else {
+                    // Connect
+                    const resp = await provider.connect();
+                    walletAddress = resp.publicKey.toString();
+                }
+                updateWalletUI();
+            } catch (err) {
+                console.error("Wallet Error:", err);
+            }
+        }
+
+        function updateWalletUI() {
+            const btn = document.getElementById('connectBtn');
+            const btnText = document.getElementById('btnText');
+            if (walletAddress) {
+                btnText.innerText = `${walletAddress.slice(0,4)}...${walletAddress.slice(-4)}`;
+                btn.className = "bg-indigo-600/20 text-indigo-400 border border-indigo-500/50 px-6 py-2.5 rounded-xl text-xs font-mono flex items-center gap-2";
+            } else {
+                btnText.innerText = `CONNECT PHANTOM`;
+                btn.className = "bg-white text-black px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-slate-200";
+            }
+        }
+
+        // Auto-detect existing connection
+        const checkConnection = async () => {
+            const provider = getProvider();
+            if (provider) {
+                try {
+                    const resp = await provider.connect({ onlyIfTrusted: true });
+                    walletAddress = resp.publicKey.toString();
+                    updateWalletUI();
+                } catch (e) {
+                    // Not connected or trusted
+                }
+            }
+        };
+
+        // --- Data & Charts ---
+        async function fetchData() {
+            try {
+                const res = await fetch(API);
+                const data = await res.json();
+                if (!data || data.length === 0) return;
+
+                marketData = data.map(d => ({ 
+                    ...d, 
+                    time: new Date(d.time),
+                    vwap: d.vwap || d.close * (1 + (Math.random() * 0.001 - 0.0005)),
+                    ema20: d.ema20 || d.close,
+                    sma50: d.sma50 || d.close * 0.998
+                }));
+
+                updateUI();
+                renderPriceChart();
+                renderRsiChart();
+            } catch (err) {
+                console.error("Fetch error:", err);
+            }
+        }
+
+        function updateUI() {
+            const latestReal = marketData.filter(d => d.type === "real").pop();
+            if (!latestReal) return;
+
+            const btcPrice = latestReal.close;
+            const rsi = latestReal.rsi || 50;
+            const solPrice = (btcPrice / 450) + (Math.random() * 2);
+            const volatility = (Math.random() * 30 + 10).toFixed(1);
+
+            document.getElementById('btcVal').innerText = `$${btcPrice.toLocaleString()}`;
+            document.getElementById('solVal').innerText = `$${solPrice.toFixed(2)}`;
+            document.getElementById('solPriceSide').innerText = `$${solPrice.toFixed(2)}`;
+            document.getElementById('rsiValTop').innerText = rsi.toFixed(1);
+            
+            const volLabel = document.getElementById('volLabel');
+            const volBar = document.getElementById('volBar');
+            volLabel.innerText = volatility > 35 ? `HIGH (${volatility}%)` : `MODERATE (${volatility}%)`;
+            volLabel.className = volatility > 35 ? "text-rose-400" : "text-amber-400";
+            volBar.style.width = `${volatility}%`;
+            volBar.className = `h-full transition-all duration-700 ${volatility > 35 ? 'bg-rose-500' : 'bg-amber-500'}`;
+
+            const vwap = latestReal.vwap;
+            const vDist = ((btcPrice - vwap) / vwap * 100).toFixed(2);
+            document.getElementById('vwapBias').innerText = btcPrice > vwap ? "BULLISH" : "BEARISH";
+            document.getElementById('vwapBias').className = `text-2xl font-bold mt-1 ${btcPrice > vwap ? 'text-emerald-400' : 'text-rose-400'}`;
+            document.getElementById('vwapDist').innerText = `${vDist}%`;
+
+            const emaStatus = document.getElementById('emaStatus');
+            if (latestReal.ema20 > latestReal.sma50) {
+                emaStatus.innerText = "BULLISH CROSS";
+                emaStatus.className = "text-[10px] font-bold text-emerald-400";
+            } else {
+                emaStatus.innerText = "BEARISH CROSS";
+                emaStatus.className = "text-[10px] font-bold text-rose-400";
+            }
+
+            const pTitle = document.getElementById('perimeterTitle');
+            const pText = document.getElementById('perimeterText');
+            const pIcon = document.getElementById('perimeterIcon');
+            const pBox = document.getElementById('perimeterBox');
+
+            if (rsi > 70) {
+                pTitle.innerText = "RISK PERIMETER: CRITICAL";
+                pTitle.className = "text-[10px] font-bold uppercase text-rose-500";
+                pText.innerText = "RSI extreme overbought. Potential reversal at local resistance. Secure positions.";
+                pIcon.className = "fa-solid fa-circle-exclamation text-rose-500 text-xs";
+                pBox.className = "p-4 rounded-xl border border-rose-500/50 bg-rose-500/10 mt-4 animate-pulse";
+                
+                if (Date.now() - lastAlertTime > 60000) {
+                    openModal(`ALERT: RSI at ${rsi.toFixed(1)}. Market is significantly overextended.`);
+                    lastAlertTime = Date.now();
+                }
+            } else {
+                pTitle.innerText = "PERIMETER SECURE";
+                pTitle.className = "text-[10px] font-bold uppercase text-emerald-500";
+                pText.innerText = "Market structure holding within safe standard deviation bands. VWAP support active.";
+                pIcon.className = "fa-solid fa-shield-halved text-emerald-500 text-xs";
+                pBox.className = "p-4 rounded-xl border border-slate-800 bg-slate-800/20 mt-4";
+            }
+        }
+
+        function renderPriceChart() {
+            const real = marketData.filter(d => d.type === "real").slice(-50);
+            const pred = marketData.filter(d => d.type === "prediction").slice(0, 10);
+            
+            const candlesticks = {
+                x: real.map(d => d.time),
+                close: real.map(d => d.close),
+                high: real.map(d => d.high),
+                low: real.map(d => d.low),
+                open: real.map(d => d.open),
+                type: 'candlestick',
+                name: 'Live Price',
+                increasing: {line: {color: '#10b981', width: 1}},
+                decreasing: {line: {color: '#f43f5e', width: 1}}
+            };
+
+            const forecast = {
+                x: pred.map(d => d.time),
+                close: pred.map(d => d.close),
+                high: pred.map(d => d.high),
+                low: pred.map(d => d.low),
+                open: pred.map(d => d.open),
+                type: 'candlestick',
+                name: 'AI Forecast',
+                opacity: 0.35,
+                increasing: {line: {color: '#10b981', width: 1, dash: 'dot'}},
+                decreasing: {line: {color: '#f43f5e', width: 1, dash: 'dot'}}
+            };
+
+            const emaTrace = {
+                x: real.map(d => d.time),
+                y: real.map(d => d.ema20),
+                type: 'scatter', mode: 'lines',
+                name: 'EMA 20', line: {color: '#06b6d4', width: 1.5}
+            };
+
+            const smaTrace = {
+                x: real.map(d => d.time),
+                y: real.map(d => d.sma50),
+                type: 'scatter', mode: 'lines',
+                name: 'SMA 50', line: {color: '#f97316', width: 1.5}
+            };
+
+            const vwapTrace = {
+                x: real.map(d => d.time),
+                y: real.map(d => d.vwap),
+                type: 'scatter', mode: 'lines',
+                name: 'VWAP', line: {color: '#eab308', width: 1, dash: 'dash'}
+            };
+
+            const layout = {
+                dragmode: 'zoom', showlegend: false,
+                margin: { l: 10, r: 50, t: 10, b: 20 },
+                xaxis: { gridcolor: '#111', type: 'date', tickfont: {color: '#444', size: 10}},
+                yaxis: { gridcolor: '#111', side: 'right', tickfont: {color: '#64748b', size: 10}},
+                paper_bgcolor: 'transparent', plot_bgcolor: 'transparent'
+            };
+
+            Plotly.newPlot('chartContainer', [candlesticks, forecast, emaTrace, smaTrace, vwapTrace], layout, {responsive: true, displayModeBar: false});
+        }
+
+        function renderRsiChart() {
+            const real = marketData.filter(d => d.type === "real").slice(-50);
+            
+            const rsiTrace = {
+                x: real.map(d => d.time),
+                y: real.map(d => d.rsi),
+                type: 'scatter', mode: 'lines',
+                fill: 'tozeroy',
+                fillcolor: 'rgba(99, 102, 241, 0.05)',
+                line: {color: '#6366f1', width: 2}
+            };
+
+            const layout = {
+                margin: { l: 10, r: 50, t: 5, b: 20 },
+                xaxis: { gridcolor: '#111', showticklabels: false },
+                yaxis: { 
+                    gridcolor: '#111', side: 'right', range: [0, 100],
+                    tickvals: [30, 70], tickfont: {color: '#444', size: 10}
+                },
+                paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+                shapes: [
+                    {type: 'line', y0: 70, y1: 70, x0: 0, x1: 1, xref: 'paper', line: {color: '#f43f5e', width: 1, dash: 'dash'}},
+                    {type: 'line', y0: 30, y1: 30, x0: 0, x1: 1, xref: 'paper', line: {color: '#10b981', width: 1, dash: 'dash'}}
+                ]
+            };
+
+            Plotly.newPlot('rsiContainer', [rsiTrace], layout, {responsive: true, displayModeBar: false});
+        }
+
+        function openModal(msg) {
+            document.getElementById('modalMessage').innerText = msg;
+            document.getElementById('riskModal').classList.replace('hidden', 'flex');
+        }
+
+        function closeModal() {
+            document.getElementById('riskModal').classList.replace('flex', 'hidden');
+        }
+
+        window.onload = () => {
+            fetchData();
+            // Try to detect wallet provider for 2 seconds (handling extension injection delay)
+            let checkCount = 0;
+            const checkInt = setInterval(() => {
+                checkConnection();
+                if (++checkCount > 10) clearInterval(checkInt);
+            }, 200);
+
+            setInterval(fetchData, 10000);
+            window.addEventListener('resize', () => {
+                Plotly.Plots.resize('chartContainer');
+                Plotly.Plots.resize('rsiContainer');
+            });
+        };
+    </script>
+</body>
+</html>
